@@ -1,11 +1,8 @@
 // After picking a kind of website: build it from a template, or with SPARC AI.
 // Both ways ask for the same basics (name, industry, colour, modules); they differ
 // only in how the website is put together.
-import { useState } from "react";
-import { AnimatePresence } from "framer-motion";
 import { ArrowLeft, ArrowRight, Check, LayoutTemplate, Sparkles } from "lucide-react";
-import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
-import GenerateModal from "../components/GenerateModal";
+import { Link, Navigate, useParams } from "react-router-dom";
 import { siteTypeById, templatesFor } from "./siteTypes";
 
 const option = "flex h-full flex-col rounded-2xl border bg-gradient-to-b from-white/[0.05] to-white/[0.02] p-6";
@@ -22,19 +19,9 @@ function Point({ children }) {
 export default function ChooseMode() {
   const { type: typeId } = useParams();
   const type = siteTypeById(typeId);
-  const navigate = useNavigate();
   const templates = templatesFor(typeId);
-  const [picked, setPicked] = useState(templates[0]?.id || null);
-  const [modalTemplate, setModalTemplate] = useState(null);
 
   if (!type) return <Navigate to="/" replace />;
-
-  function startTemplate() {
-    const template = templates.find((t) => t.id === picked);
-    if (!template) return;
-    if (template.inputMode === "wizard") navigate(`/portal/new/${template.id}`);
-    else setModalTemplate(template);
-  }
 
   return (
     <main className="min-h-screen bg-[#070b14] text-slate-100 antialiased">
@@ -63,36 +50,17 @@ export default function ChooseMode() {
             </ul>
 
             {templates.length > 0 ? (
-              <>
-                {templates.length > 1 && (
-                  <fieldset className="mt-5">
-                    <legend className="text-xs font-semibold uppercase tracking-wide text-slate-400">Pick a template</legend>
-                    <div className="mt-2 space-y-2">
-                      {templates.map((t) => (
-                        <label key={t.id} className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 text-sm transition ${picked === t.id ? "border-sky-400 bg-sky-400/10" : "border-white/[0.08] hover:border-white/[0.2]"}`}>
-                          <input type="radio" name="template" value={t.id} checked={picked === t.id} onChange={() => setPicked(t.id)} className="mt-1 accent-sky-400" />
-                          <span>
-                            <span className="block font-medium text-white">{t.name}</span>
-                            <span className="mt-0.5 line-clamp-2 block text-xs text-slate-400">{t.description}</span>
-                          </span>
-                        </label>
-                      ))}
-                    </div>
-                  </fieldset>
-                )}
-                <div className="mt-auto pt-6">
-                  <button
-                    type="button"
-                    onClick={startTemplate}
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-slate-100 active:scale-[0.98]"
-                  >
-                    Continue with template <ArrowRight className="h-4 w-4" aria-hidden />
-                  </button>
-                </div>
-              </>
+              <div className="mt-auto pt-6">
+                <Link
+                  to={`/new/${type.id}/templates`}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-slate-100 active:scale-[0.98]"
+                >
+                  See {templates.length} template{templates.length > 1 ? "s" : ""} <ArrowRight className="h-4 w-4" aria-hidden />
+                </Link>
+              </div>
             ) : (
               <p className="mt-6 rounded-lg border border-white/[0.08] bg-white/[0.03] p-3 text-sm text-slate-400" role="note">
-                There is no ready template for a {type.name.toLowerCase()} yet. Build it with SPARC AI instead.
+                There is no ready template for {/^[aeiou]/i.test(type.name) ? "an" : "a"} {type.name.toLowerCase()} yet. Build it with SPARC AI instead.
               </p>
             )}
           </section>
@@ -125,7 +93,6 @@ export default function ChooseMode() {
         <p className="mt-6 text-xs leading-relaxed text-slate-500">Both ways ask for the same basics: name, industry, colour and, for portals, the modules. In both you can also edit the JSON by hand.</p>
       </div>
 
-      <AnimatePresence>{modalTemplate && <GenerateModal template={modalTemplate} onClose={() => setModalTemplate(null)} />}</AnimatePresence>
     </main>
   );
 }

@@ -14,7 +14,8 @@ export const initialState = {
   industryChoice: "auto", // "auto" lets the planner decide, otherwise an industry id
   colorChoice: "", // optional brand colour (#rrggbb)
   styleChoice: "auto", // "auto" lets the planner decide, otherwise a style level id
-  manual: false, // true after the config was edited as JSON (choices then no longer rebuild it)
+  manual: false, // true after the config was edited by hand (form or JSON)
+  details: null, // the content the user edited by hand (sections, store, booking...), kept when choices change
   plan: null, // { engine, questions, reuse, fallbackReason }
   signals: null,
   config: null,
@@ -220,6 +221,29 @@ export function canBuild(state) {
   return Boolean(state.config) && state.errors.length === 0 && !state.busy;
 }
 
+/** The parts of a config a person edits by hand (the rest is rebuilt from the choices). */
+export function pickDetails(config) {
+  const out = {};
+  for (const k of ["sections", "store", "booking", "nav", "footer", "meta", "notFound"]) if (config?.[k] !== undefined) out[k] = config[k];
+  return out;
+}
+
+/**
+ * Put the user's hand-edited content back on top of a config rebuilt from the choices.
+ * Sections that are no longer on the page are dropped; sections that are new keep the starter text.
+ */
+export function mergeDetails(config, details) {
+  if (!details) return config;
+  const next = { ...config };
+  for (const k of ["store", "booking"]) if (details[k] !== undefined && config[k] !== undefined) next[k] = details[k];
+  for (const k of ["nav", "footer", "meta", "notFound"]) if (details[k] !== undefined) next[k] = details[k];
+  if (details.sections && config.sections) {
+    next.sections = { ...config.sections };
+    for (const room of Object.keys(config.sections)) if (room in details.sections) next.sections[room] = details.sections[room];
+  }
+  return next;
+}
+
 // ---- reducer ----
 
 export function reduce(state, action) {
@@ -247,6 +271,8 @@ export function reduce(state, action) {
         errors: plan.errors || [],
         composition: null,
         lock: null,
+        details: null,
+        manual: false,
         projectName: slugify(plan.signals.brandName?.startsWith("Your") ? state.description.split(/\s+/).slice(0, 3).join(" ") : plan.signals.brandName),
         buildResult: null,
         repo: null,
@@ -255,9 +281,9 @@ export function reduce(state, action) {
     }
     case "edited":
       // The user changed a choice: keep it, drop anything built from the old one.
-      return { ...state, signals: action.signals, manual: false, buildResult: null, repo: null, deployment: null };
-    case "manualApplied": // the config was edited as JSON and accepted
-      return { ...state, busy: null, error: "", manual: true, config: action.config, errors: [], composition: action.composition, lock: action.lock, buildResult: null, repo: null, deployment: null };
+      return { ...state, signals: action.signals, buildResult: null, repo: null, deployment: null };
+    case "manualApplied": // the config was edited by hand (form or JSON) and accepted
+      return { ...state, busy: null, error: "", manual: true, details: pickDetails(action.config), config: action.config, errors: [], composition: action.composition, lock: action.lock, buildResult: null, repo: null, deployment: null };
     case "refreshed":
       return { ...state, busy: null, error: "", config: action.config, errors: action.errors || [], composition: action.composition, lock: action.lock };
     case "projectName":

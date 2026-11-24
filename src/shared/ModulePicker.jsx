@@ -2,13 +2,13 @@
 // It only shows what it is given, so each flow decides which modules are relevant
 // (for example, only the clinic's modules for a clinic). It never lists extras.
 import { useMemo, useState } from "react";
-import { Check, Plus, Search, X } from "lucide-react";
+import { Check, Lock, Plus, Search, X } from "lucide-react";
 
 const chip =
   "inline-flex items-center gap-1.5 rounded-full border border-white/[0.12] bg-white/[0.05] py-1 pl-3 pr-1.5 text-sm text-slate-100";
 
 /**
- * selected   [{ id, name, detail? }]            what is already in the website
+ * selected   [{ id, name, detail?, locked? }]    what is already in the website (locked = required, cannot be removed)
  * available  [{ id, name, summary? }]           modules that can be added (already filtered by the caller)
  * general    [{ id, name, summary? }]           optional extra group, hidden until the user asks
  * onAdd(id), onRemove(id)
@@ -40,15 +40,21 @@ export default function ModulePicker({ selected, available, general = [], onAdd,
                 <Check className="h-3.5 w-3.5 text-emerald-300" aria-hidden />
                 {m.name}
                 {m.detail && <span className="text-xs text-slate-500">· {m.detail}</span>}
-                <button
-                  type="button"
-                  aria-label={`Remove ${m.name}`}
-                  onClick={() => onRemove(m.id)}
-                  disabled={selected.length <= minSelected}
-                  className="rounded-full p-0.5 text-slate-400 transition hover:bg-white/[0.12] hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
+                {m.locked ? (
+                  <span className="mr-1.5 text-slate-500" title="Required for this kind of website" aria-label={`${m.name} is required`}>
+                    <Lock className="h-3 w-3" aria-hidden />
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    aria-label={`Remove ${m.name}`}
+                    onClick={() => onRemove(m.id)}
+                    disabled={selected.filter((s) => !s.locked).length + selected.filter((s) => s.locked).length <= minSelected}
+                    className="rounded-full p-0.5 text-slate-400 transition hover:bg-white/[0.12] hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
               </li>
             ))}
           </ul>

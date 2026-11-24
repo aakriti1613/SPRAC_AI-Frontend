@@ -24,11 +24,13 @@ import {
   X,
 } from "lucide-react";
 import { apiFetch } from "../lib/api";
+import { FormSections } from "../forms/FormEngine";
+import { CONTENT_FORM, emptyContentModel, toContent } from "../forms/contentDefs";
 
 const INPUT_MODES = [
-  { id: "ai", label: "✨ AI Generate", icon: Sparkles, accent: "violet" },
+  { id: "form", label: "📝 Fill in a form", icon: PencilLine, accent: "sky" },
+  { id: "ai", label: "✨ Describe with AI", icon: Sparkles, accent: "violet" },
   { id: "json", label: "📋 Paste JSON", icon: FileJson, accent: "emerald" },
-  { id: "manual", label: "📝 Manual Form", icon: PencilLine, accent: "amber" },
 ];
 
 const JSON_PLACEHOLDER = `Paste your content.json here...
@@ -157,7 +159,7 @@ const slideVariants = {
 export default function GenerateModal({ template, onClose }) {
   const [screen, setScreen] = useState("describe");
   const [direction, setDirection] = useState(1);
-  const [activeMode, setActiveMode] = useState("ai");
+  const [activeMode, setActiveMode] = useState("form");
   const [sourceMode, setSourceMode] = useState("ai");
 
   const [projectName, setProjectName] = useState(
@@ -165,17 +167,14 @@ export default function GenerateModal({ template, onClose }) {
   );
   const [description, setDescription] = useState("");
   const [pasteJson, setPasteJson] = useState("");
-  const [siteName, setSiteName] = useState("My New Site");
-  const [siteDescription, setSiteDescription] = useState(
-    "Built with the platform builder"
-  );
+  const [model, setModel] = useState(emptyContentModel);
 
   const [aiStatus, setAiStatus] = useState("idle");
   const [aiError, setAiError] = useState(null);
   const [pasteStatus, setPasteStatus] = useState("idle");
   const [pasteError, setPasteError] = useState(null);
-  const [manualStatus, setManualStatus] = useState("idle");
-  const [manualError, setManualError] = useState(null);
+  const [formStatus, setFormStatus] = useState("idle");
+  const [formError, setFormError] = useState(null);
 
   const [config, setConfig] = useState(null);
   const [validationWarnings, setValidationWarnings] = useState([]);
@@ -292,18 +291,17 @@ export default function GenerateModal({ template, onClose }) {
     }
   }
 
-  async function handleManualPreview(e) {
+  async function handleFormPreview(e) {
     e.preventDefault();
-    setManualStatus("loading");
-    setManualError(null);
+    setFormStatus("loading");
+    setFormError(null);
     try {
-      const manualConfig = buildManualConfig(siteName, siteDescription);
-      const { config: nextConfig, warnings } = await validateConfig(manualConfig);
-      setManualStatus("idle");
-      setValidatedResult(nextConfig, warnings, "manual");
+      const { config: nextConfig, warnings } = await validateConfig(toContent(model));
+      setFormStatus("idle");
+      setValidatedResult(nextConfig, warnings, "form");
     } catch (err) {
-      setManualError(err.message);
-      setManualStatus("error");
+      setFormError(err.message);
+      setFormStatus("error");
     }
   }
 
@@ -400,7 +398,7 @@ export default function GenerateModal({ template, onClose }) {
       const data = await pushToGithub({
         projectName: genResult.projectName,
         repoName: genResult.projectName,
-        description: siteDescription || description.slice(0, 80) || "Built with platform builder",
+        description: config?.meta?.description || description.slice(0, 80) || "Built with SPARC AI",
         isPrivate: true,
       });
       setPushResult(data);
@@ -518,18 +516,9 @@ export default function GenerateModal({ template, onClose }) {
                     </TabPanel>
                   )}
 
-                  {activeMode === "manual" && (
-                    <TabPanel key="manual">
-                      <ManualForm
-                        siteName={siteName}
-                        setSiteName={setSiteName}
-                        siteDescription={siteDescription}
-                        setSiteDescription={setSiteDescription}
-                        status={manualStatus}
-                        error={manualError}
-                        onSubmit={handleManualPreview}
-                        projectName={projectName}
-                      />
+                  {activeMode === "form" && (
+                    <TabPanel key="form">
+                      <FormTab model={model} setModel={setModel} status={formStatus} error={formError} onSubmit={handleFormPreview} projectName={projectName} />
                     </TabPanel>
                   )}
                 </AnimatePresence>
@@ -632,8 +621,8 @@ function InputTabs({ activeMode, setActiveMode }) {
         const activeClass =
           accent === "emerald"
             ? "border-emerald-300/50 bg-emerald-400/15 text-emerald-100 shadow-emerald-500/10"
-            : accent === "amber"
-              ? "border-amber-300/50 bg-amber-400/15 text-amber-100 shadow-amber-500/10"
+            : accent === "sky"
+              ? "border-sky-300/50 bg-sky-400/15 text-sky-100 shadow-sky-500/10"
               : "border-violet-300/50 bg-violet-400/15 text-violet-100 shadow-violet-500/10";
 
         return (
@@ -781,50 +770,39 @@ function PasteJsonForm({ value, onChange, status, error, onValidate, projectName
   );
 }
 
-function ManualForm({
-  siteName,
-  setSiteName,
-  siteDescription,
-  setSiteDescription,
-  status,
-  error,
-  onSubmit,
-  projectName,
-}) {
+/** Step 1 of 3: fill in the portfolio like the portal wizard: one section at a time. */
+function FormTab({ model, setModel, status, error, onSubmit, projectName }) {
   const loading = status === "loading";
+  const ready = Boolean((model.siteName || model.profile?.fullName || "").trim());
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       <div>
-        <h3 className="text-lg font-semibold text-white">Manual Form</h3>
-        <p className="mt-1 text-sm text-slate-400">Fill the starter fields directly.</p>
+        <h3 className="text-lg font-semibold text-white">Fill in your details</h3>
+        <p className="mt-1 text-sm text-slate-400">Open each section and fill in what you like. Empty parts are left out. Nothing is sent until you press the button.</p>
       </div>
 
-      <TextField label="Site name" value={siteName} onChange={setSiteName} />
-      <TextField
-        label="Description"
-        value={siteDescription}
-        onChange={setSiteDescription}
-      />
+      <FormSections defs={CONTENT_FORM} value={model} onChange={setModel} idBase="tpl" />
 
       {error && <InlineError label="Error" message={error} />}
 
       <button
         type="submit"
-        disabled={loading || !projectName.trim() || !siteName.trim()}
+        disabled={loading || !projectName.trim() || !ready}
         className="flex w-full items-center justify-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
       >
         {loading ? (
           <>
             <Loader2 className="h-4 w-4 animate-spin" />
-            Validating...
+            Checking...
           </>
         ) : (
           <>
             <CheckCircle2 className="h-4 w-4" />
-            Validate & Preview
+            Check and preview
           </>
         )}
       </button>
+      {!ready && <p className="text-center text-xs text-slate-500">Add at least your name to continue.</p>}
     </form>
   );
 }
@@ -1594,31 +1572,6 @@ function TextField({ label, hint, value, onChange }) {
       {hint && <div className="mt-1 text-[11px] text-slate-500">{hint}</div>}
     </label>
   );
-}
-
-function buildManualConfig(siteName, siteDescription) {
-  const fullName = siteName.trim() || "My New Site";
-  const firstName = fullName.split(/\s+/).filter(Boolean)[0] || fullName;
-  const summary = siteDescription.trim();
-
-  return {
-    siteName: fullName,
-    meta: {
-      title: fullName,
-      description: summary,
-    },
-    profile: {
-      firstName,
-      fullName,
-      heroHeadline: truncateWords(summary || fullName, 7),
-      heroSummary: summary,
-    },
-    footerCopyright: `© ${new Date().getFullYear()} ${fullName}. All rights reserved.`,
-  };
-}
-
-function truncateWords(value, max) {
-  return value.split(/\s+/).filter(Boolean).slice(0, max).join(" ");
 }
 
 function formatJsonParseError(error, source) {

@@ -2,6 +2,8 @@
 // `fetchApi(path, init)` is passed in (the app gives it apiFetch, tests give a
 // fake), so this file has no browser or Vite dependency.
 
+import { mergeDetails } from "./builderState.js";
+
 async function call(fetchApi, path, { method = "GET", body } = {}) {
   const res = await fetchApi(path, {
     method,
@@ -60,13 +62,19 @@ export function createBuilderClient(fetchApi) {
 }
 
 /** Edit -> rebuild the config -> show which components fill the rooms. */
-export async function refreshFromSignals(client, signals) {
+export async function refreshFromSignals(client, signals, details = null) {
   const rebuilt = await client.rebuild(signals);
   if (!rebuilt.config || (rebuilt.errors && rebuilt.errors.length)) {
     return { config: rebuilt.config || null, errors: rebuilt.errors || [], composition: null, lock: null };
   }
-  const composed = await client.compose({ websiteType: rebuilt.config.websiteType, styleLevel: rebuilt.config.styleLevel, enabledOptional: rebuilt.config.rooms.enabled, industry: rebuilt.config.industry });
-  return { config: rebuilt.config, errors: [], composition: composed.composition, lock: composed.lock };
+  // The user's hand-edited content goes back on top of the rebuilt config (and is checked again).
+  const config = mergeDetails(rebuilt.config, details);
+  if (config !== rebuilt.config) {
+    const checked = await client.check(config);
+    if (!checked.ok) return { config, errors: checked.errors, composition: null, lock: null };
+  }
+  const composed = await client.compose({ websiteType: config.websiteType, styleLevel: config.styleLevel, enabledOptional: config.rooms.enabled, industry: config.industry });
+  return { config, errors: [], composition: composed.composition, lock: composed.lock };
 }
 
 /** A config edited as JSON: parse it, check it on the server, and find the components it would use. */

@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { ArrowLeft, ArrowRight, HelpCircle } from "lucide-react";
 import ModulePicker from "../shared/ModulePicker";
+import { hasContentForm } from "../forms/siteDefs";
+import DetailsForm from "./DetailsForm";
 import {
   addModule,
   allowedStyles,
@@ -63,7 +65,7 @@ function JsonEditor({ config, manual, onApply }) {
   };
   return (
     <div className="space-y-3">
-      <Hint>For people who know the format. Your changes are checked before they are used. Changing a choice above afterwards rebuilds the config and replaces these edits.</Hint>
+      <Hint>For people who know the format. Your changes are checked before they are used. If you change a choice above afterwards, the config is rebuilt and your content edits are kept.</Hint>
       <label htmlFor="config-json" className="sr-only">
         Config as JSON
       </label>
@@ -87,7 +89,7 @@ function JsonEditor({ config, manual, onApply }) {
   );
 }
 
-export default function StepPlan({ state, options, dispatch, onEdit, onReplan, onManualApply }) {
+export default function StepPlan({ state, options, dispatch, onEdit, onReplan, onManualApply, onDetailsApply }) {
   const { signals, config, plan } = state;
   const type = options?.websiteTypes?.find((w) => w.id === signals.websiteType);
   const levels = allowedStyles(options, signals.websiteType);
@@ -102,6 +104,16 @@ export default function StepPlan({ state, options, dispatch, onEdit, onReplan, o
   const selected = (config?.modules || []).map((m) => ({ id: m.id, name: m.pluralName, detail: `${m.fields.length} fields` }));
   const optional = type?.optionalRooms || [];
   const onCount = optional.filter((r) => roomIsOn(config, r.id)).length;
+  // Sections of a site: the required ones are locked; the optional ones can be added and removed.
+  const optionalIds = new Set(optional.map((r) => r.id));
+  const nice = (id) => id.replace(/-/g, " ");
+  const sectionsOn = [
+    ...Object.keys(config?.sections || {})
+      .filter((id) => !optionalIds.has(id))
+      .map((id) => ({ id, name: nice(id), locked: true })),
+    ...optional.filter((r) => roomIsOn(config, r.id)).map((r) => ({ id: r.id, name: nice(r.id) })),
+  ];
+  const sectionsOff = optional.filter((r) => !roomIsOn(config, r.id)).map((r) => ({ id: r.id, name: nice(r.id), summary: r.description }));
 
   return (
     <div className="space-y-5">
@@ -222,20 +234,27 @@ export default function StepPlan({ state, options, dispatch, onEdit, onReplan, o
           <Hint>Each module becomes a menu item, a table and a form. Only modules that belong to your industry are listed.</Hint>
         </Section>
       ) : (
-        <Section title="Sections on the page" badge={Object.keys(config?.sections || {}).length} summary={Object.keys(config?.sections || {}).join(", ")}>
-          <ul className="flex flex-wrap gap-2" aria-label="Sections">
-            {Object.keys(config?.sections || {}).map((s) => (
-              <li key={s} className="rounded-full border border-white/[0.1] bg-white/[0.05] px-3 py-1 text-sm text-slate-200">
-                {s}
-              </li>
-            ))}
-          </ul>
-          <Hint>Sections start with sample text. Change them in the JSON editor below, or after the site is generated.</Hint>
-        </Section>
+        <>
+          <Section title="Sections on the page" defaultOpen badge={sectionsOn.length} summary={sectionsOn.map((s) => s.name).join(", ")}>
+            <ModulePicker
+              noun="section"
+              selected={sectionsOn}
+              available={sectionsOff}
+              onAdd={(id) => onEdit(toggleRoom(signals, config, id))}
+              onRemove={(id) => onEdit(toggleRoom(signals, config, id))}
+            />
+            <Hint>Locked sections are part of every {typeName(options, signals.websiteType).toLowerCase()}. Add or remove the others.</Hint>
+          </Section>
+          {hasContentForm(signals.websiteType) && (
+            <Section title="Fill in your details" defaultOpen summary="Your text, pictures, prices and links">
+              <DetailsForm websiteType={signals.websiteType} config={config} onApply={onDetailsApply} />
+            </Section>
+          )}
+        </>
       )}
 
-      {/* Optional parts */}
-      {optional.length > 0 && (
+      {/* Optional parts (portals) */}
+      {isPortal && optional.length > 0 && (
         <Section title="Optional parts" badge={`${onCount} on`} summary="Extra sections you can switch on or off">
           <div className="grid gap-1.5 sm:grid-cols-2">
             {optional.map((r) => (

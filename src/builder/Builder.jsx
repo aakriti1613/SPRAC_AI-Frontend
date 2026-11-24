@@ -19,6 +19,7 @@ export default function Builder() {
   const [options, setOptions] = useState(null);
   const [optionsError, setOptionsError] = useState("");
   const latest = useRef(0); // the newest edit wins if several are in flight
+  const detailsRef = useRef(null); // the hand-edited content, read by every rebuild
 
   useEffect(() => {
     let alive = true;
@@ -31,13 +32,17 @@ export default function Builder() {
     };
   }, [client]);
 
+  useEffect(() => {
+    detailsRef.current = state.details;
+  }, [state.details]);
+
   /** Rebuild the config from choices and refresh which components are used. */
   const refresh = useCallback(
     async (signals) => {
       const id = ++latest.current;
       dispatch({ type: "busy", value: "rebuilding" });
       try {
-        const r = await refreshFromSignals(client, signals);
+        const r = await refreshFromSignals(client, signals, detailsRef.current);
         if (id === latest.current) dispatch({ type: "refreshed", ...r });
       } catch (e) {
         if (id === latest.current) dispatch({ type: "error", message: e.message });
@@ -71,6 +76,16 @@ export default function Builder() {
   const onManualApply = useCallback(
     async (text) => {
       const r = await applyManualConfig(client, text);
+      if (r.ok) dispatch({ type: "manualApplied", config: r.config, composition: r.composition, lock: r.lock });
+      return r;
+    },
+    [client]
+  );
+
+  /** The content form saved a new config: check it, then use it. */
+  const onDetailsApply = useCallback(
+    async (config) => {
+      const r = await applyManualConfig(client, JSON.stringify(config));
       if (r.ok) dispatch({ type: "manualApplied", config: r.config, composition: r.composition, lock: r.lock });
       return r;
     },
@@ -122,7 +137,7 @@ export default function Builder() {
         ) : state.step === "describe" ? (
           <StepDescribe state={state} options={options} dispatch={dispatch} onPlan={onPlan} />
         ) : state.step === "plan" && state.signals ? (
-          <StepPlan state={state} options={options} dispatch={dispatch} onEdit={onEdit} onReplan={onPlan} onManualApply={onManualApply} />
+          <StepPlan state={state} options={options} dispatch={dispatch} onEdit={onEdit} onReplan={onPlan} onManualApply={onManualApply} onDetailsApply={onDetailsApply} />
         ) : state.step === "result" && state.config ? (
           <StepResult state={state} dispatch={dispatch} onBuild={onBuild} onPush={onPush} onDeploy={onDeploy} />
         ) : null}
