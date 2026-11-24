@@ -12,7 +12,12 @@ async function call(fetchApi, path, { method = "GET", body } = {}) {
   });
   const data = await res.json().catch(() => ({}));
   if (res.status === 404 && /\/api\/(plan|compose|sparc|registry|build)/.test(path)) {
-    throw new Error("The builder is switched off on the server. Set SPARC_API_ENABLED=1 on the backend and restart it.");
+    throw new Error("This server cannot run the builder. It is either switched off (set SPARC_API_ENABLED=1) or it is an older version of the backend. Update and restart (or redeploy) the backend this site talks to.");
+  }
+  // Never show Google's raw quota or billing errors: they mean nothing to the person using the builder.
+  const raw = String(data.error || "");
+  if (/RESOURCE_EXHAUSTED|PERMISSION_DENIED|free tier|embed_content|billing|generativelanguage/i.test(raw)) {
+    throw Object.assign(new Error("The AI service is busy or not available right now. Please try again in a minute. You can still build by filling in the form or pasting a config, which do not need it."), { data, status: res.status });
   }
   if (!res.ok || data.success === false) {
     // /api/build answers 200 with success:false and a list of errors; surface them.
