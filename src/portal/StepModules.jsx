@@ -13,12 +13,16 @@
   UserRound,
 } from "lucide-react";
 
+import ModulePicker from "../shared/ModulePicker";
 import {
   createField,
   createModule,
+  createPresetModule,
   ESSENTIAL_FIELD_TYPES,
   ICON_OPTIONS,
+  presetModuleList,
   slugify,
+  INDUSTRY_OPTIONS,
 } from "./portalDefaults";
 
 const dashboardTemplates = ["stats-overview", "charts", "minimal"];
@@ -303,6 +307,19 @@ export default function StepModules({ config, onChange, errors }) {
     });
   }
 
+  // Ready-made modules for the chosen industry only, added with one click.
+  const industry = config.industry || "generic";
+  const industryName = INDUSTRY_OPTIONS.find((o) => o.value === industry)?.label || industry;
+  const readyMade = presetModuleList(industry).filter((p) => !modules.some((m) => m.id === p.id));
+  function addReadyMade(id) {
+    const module = createPresetModule(industry, id);
+    if (module) updateConfig({ modules: [...modules, module] });
+  }
+  function removeById(id) {
+    const index = modules.findIndex((m) => m.id === id);
+    if (index >= 0) deleteModule(index);
+  }
+
   function deleteModule(index) {
     if (!window.confirm("Delete this module and all of its fields?")) return;
     updateConfig({ modules: modules.filter((_, i) => i !== index) });
@@ -412,12 +429,26 @@ export default function StepModules({ config, onChange, errors }) {
         </div>
       </section>
 
+      {/* Ready-made modules for this industry (same picker as SPARC AI) */}
+      <section className="rounded-2xl border border-white/10 bg-slate-900/40 p-5">
+        <h3 className="text-sm font-semibold text-white">Pick your modules</h3>
+        <p className="mb-4 mt-1 text-xs text-slate-400">Ready-made modules for {industryName.toLowerCase()}. Add the ones you need, then fine-tune their fields below.</p>
+        <ModulePicker
+          selected={modules.map((m) => ({ id: m.id, name: m.pluralName, detail: `${m.fields?.length || 0} fields` }))}
+          available={readyMade}
+          minSelected={0}
+          reasonLabel={industryName.toLowerCase()}
+          onAdd={addReadyMade}
+          onRemove={removeById}
+        />
+      </section>
+
       {/* CRUD modules */}
       <section>
         <div className="mb-3 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
           <div>
             <h3 className="text-sm font-semibold text-white">
-              CRUD modules
+              Edit your modules
               <span className="ml-2 rounded-full bg-white/5 px-2 py-0.5 text-[11px] font-medium text-slate-400 ring-1 ring-white/10">
                 {modules.length}
               </span>
@@ -436,7 +467,7 @@ export default function StepModules({ config, onChange, errors }) {
             }}
           >
             <Plus className="h-4 w-4" />
-            Add module
+            Add custom module
           </button>
         </div>
 

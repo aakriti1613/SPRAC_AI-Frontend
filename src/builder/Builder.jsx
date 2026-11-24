@@ -1,11 +1,11 @@
 // The AI builder page: describe -> plan (review and edit) -> build -> push -> deploy.
 // All real work happens on the server; this page only collects choices and shows results.
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { apiFetch } from "../lib/api";
-import { createBuilderClient, refreshFromSignals } from "./builderClient";
-import { initialState, reduce } from "./builderState";
+import { applyManualConfig, createBuilderClient, refreshFromSignals } from "./builderClient";
+import { applyChoices, initialState, reduce } from "./builderState";
 import StepDescribe from "./StepDescribe";
 import StepPlan from "./StepPlan";
 import StepResult from "./StepResult";
@@ -13,7 +13,9 @@ import { ErrorBox, Spinner, StepBar } from "./ui";
 
 export default function Builder() {
   const client = useMemo(() => createBuilderClient(apiFetch), []);
-  const [state, dispatch] = useReducer(reduce, initialState);
+  const [params] = useSearchParams();
+  const typeFromUrl = params.get("type");
+  const [state, dispatch] = useReducer(reduce, typeFromUrl, (type) => ({ ...initialState, chosenType: type || null }));
   const [options, setOptions] = useState(null);
   const [optionsError, setOptionsError] = useState("");
   const latest = useRef(0); // the newest edit wins if several are in flight
@@ -56,12 +58,24 @@ export default function Builder() {
     dispatch({ type: "busy", value: "planning" });
     try {
       const plan = await client.plan({ description: state.description.trim(), styleLevel: state.styleChoice === "auto" ? undefined : state.styleChoice });
-      dispatch({ type: "planned", plan });
-      refresh({ ...plan.signals, disabledOptional: [] });
+      // What was chosen on the home screen and in the Basics wins over what the planner guessed.
+      const signals = applyChoices(options, plan.signals, state);
+      dispatch({ type: "planned", plan: { ...plan, signals } });
+      refresh({ ...signals, disabledOptional: [] });
     } catch (e) {
       dispatch({ type: "error", message: e.message });
     }
-  }, [client, state.description, state.styleChoice, refresh]);
+  }, [client, options, state, refresh]);
+
+  /** A config edited as JSON: check it on the server, then use it. Returns { ok, errors } for the editor. */
+  const onManualApply = useCallback(
+    async (text) => {
+      const r = await applyManualConfig(client, text);
+      if (r.ok) dispatch({ type: "manualApplied", config: r.config, composition: r.composition, lock: r.lock });
+      return r;
+    },
+    [client]
+  );
 
   const onBuild = useCallback(async () => {
     dispatch({ type: "busy", value: "building" });
@@ -93,11 +107,11 @@ export default function Builder() {
   return (
     <main className="min-h-screen bg-[#070b14] text-slate-100 antialiased">
       <div className="mx-auto w-full max-w-5xl px-6 py-10">
-        <Link to="/" className="mb-6 inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-white">
-          <ArrowLeft className="h-4 w-4" /> Back to templates
+        <Link to={state.chosenType ? `/new/${state.chosenType}` : "/"} className="mb-6 inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-white">
+          <ArrowLeft className="h-4 w-4" /> Back
         </Link>
-        <h1 className="text-3xl font-bold tracking-tight text-white">Build with AI</h1>
-        <p className="mb-8 mt-2 max-w-2xl text-sm text-slate-400">Describe your website in plain words. We plan it from tested, reusable parts, you adjust the plan, and we build and check it.</p>
+        <h1 className="text-3xl font-bold tracking-tight text-white">Build with SPARC AI</h1>
+        <p className="mb-8 mt-2 max-w-2xl text-sm text-slate-400">Describe your website in plain words. SPARC AI plans it from tested, reusable parts, you adjust the plan, and it builds and checks the site.</p>
 
         <StepBar step={state.step} />
 
@@ -108,7 +122,7 @@ export default function Builder() {
         ) : state.step === "describe" ? (
           <StepDescribe state={state} options={options} dispatch={dispatch} onPlan={onPlan} />
         ) : state.step === "plan" && state.signals ? (
-          <StepPlan state={state} options={options} dispatch={dispatch} onEdit={onEdit} onReplan={onPlan} />
+          <StepPlan state={state} options={options} dispatch={dispatch} onEdit={onEdit} onReplan={onPlan} onManualApply={onManualApply} />
         ) : state.step === "result" && state.config ? (
           <StepResult state={state} dispatch={dispatch} onBuild={onBuild} onPush={onPush} onDeploy={onDeploy} />
         ) : null}

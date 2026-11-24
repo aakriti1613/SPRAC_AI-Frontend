@@ -381,31 +381,50 @@ export function createModule(singularName = "Record", pluralName = "Records") {
   };
 }
 
+function moduleFromDefinition(definition) {
+  const fields = definition.fields.map(([label, type, options]) =>
+    createField(label, type, options)
+  );
+  return {
+    id: slugify(definition.pluralName),
+    singularName: definition.singularName,
+    pluralName: definition.pluralName,
+    icon: definition.icon || "Database",
+    collapsed: false,
+    fields,
+    listColumns:
+      definition.listColumns ||
+      fields.slice(0, 4).map((field) => field.key),
+    tableFeatures: {
+      sort: true,
+      filter: true,
+      search: true,
+      pagination: true,
+      export: true,
+    },
+  };
+}
+
 function createPresetModules(industry = "generic") {
   const definitions = INDUSTRY_MODULES[industry] || INDUSTRY_MODULES.generic;
-  return definitions.map((definition) => {
-    const fields = definition.fields.map(([label, type, options]) =>
-      createField(label, type, options)
-    );
-    return {
-      id: slugify(definition.pluralName),
-      singularName: definition.singularName,
-      pluralName: definition.pluralName,
-      icon: definition.icon || "Database",
-      collapsed: false,
-      fields,
-      listColumns:
-        definition.listColumns ||
-        fields.slice(0, 4).map((field) => field.key),
-      tableFeatures: {
-        sort: true,
-        filter: true,
-        search: true,
-        pagination: true,
-        export: true,
-      },
-    };
-  });
+  return definitions.map(moduleFromDefinition);
+}
+
+/** Ready-made modules of ONE industry, for the module picker (never another industry's). */
+export function presetModuleList(industry = "generic") {
+  const definitions = INDUSTRY_MODULES[industry] || INDUSTRY_MODULES.generic;
+  return definitions.map((definition) => ({
+    id: slugify(definition.pluralName),
+    name: definition.pluralName,
+    summary: "Fields: " + definition.fields.slice(0, 4).map(([label]) => label).join(", "),
+  }));
+}
+
+/** One ready-made module, by the id from presetModuleList (null if there is none). */
+export function createPresetModule(industry = "generic", id) {
+  const definitions = INDUSTRY_MODULES[industry] || INDUSTRY_MODULES.generic;
+  const definition = definitions.find((d) => slugify(d.pluralName) === id);
+  return definition ? moduleFromDefinition(definition) : null;
 }
 
 export function getIndustryPreset(industry = "generic") {

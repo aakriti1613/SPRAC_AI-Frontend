@@ -49,7 +49,7 @@ export const templateCategories = [
         id: "crud-modern-new-temp",
         name: "Topbar CRUD Portal",
         type: "portal",
-        description: "Topbar-first CRUD portal using the same scaffolding flow.",
+        description: "Topbar-first CRUD portal using the same template flow.",
         accent: "#2563eb",
         tags: ["topbar temp", "CRUD", "Dashboard", "Supabase", "Auth"],
         aliases: ["topbar temp"],

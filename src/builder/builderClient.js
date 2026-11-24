@@ -38,7 +38,18 @@ export function createBuilderClient(fetchApi) {
     },
 
     /** Which verified component fills each room at this style, plus the reuse lock. */
-    compose: ({ websiteType, styleLevel, enabledOptional }) => call(fetchApi, "/api/compose", { method: "POST", body: { websiteType, styleLevel, enabledOptional } }),
+    compose: ({ websiteType, styleLevel, enabledOptional, industry }) => call(fetchApi, "/api/compose", { method: "POST", body: { websiteType, styleLevel, enabledOptional, ...(industry ? { industry } : {}) } }),
+
+    /** Check a config the user edited by hand. Returns { ok, errors } (problems are returned, not thrown). */
+    async check(config) {
+      try {
+        await call(fetchApi, "/api/sparc/check", { method: "POST", body: { config } });
+        return { ok: true, errors: [] };
+      } catch (err) {
+        if (err.data?.errors) return { ok: false, errors: err.data.errors };
+        throw err;
+      }
+    },
 
     /** Assemble the project into the server's output folder, ready to push and deploy. */
     build: ({ config, name, feedback }) => call(fetchApi, "/api/build", { method: "POST", body: { config, name, forDeploy: true, ...(feedback ? { feedback } : {}) } }),
@@ -54,6 +65,21 @@ export async function refreshFromSignals(client, signals) {
   if (!rebuilt.config || (rebuilt.errors && rebuilt.errors.length)) {
     return { config: rebuilt.config || null, errors: rebuilt.errors || [], composition: null, lock: null };
   }
-  const composed = await client.compose({ websiteType: rebuilt.config.websiteType, styleLevel: rebuilt.config.styleLevel, enabledOptional: rebuilt.config.rooms.enabled });
+  const composed = await client.compose({ websiteType: rebuilt.config.websiteType, styleLevel: rebuilt.config.styleLevel, enabledOptional: rebuilt.config.rooms.enabled, industry: rebuilt.config.industry });
   return { config: rebuilt.config, errors: [], composition: composed.composition, lock: composed.lock };
+}
+
+/** A config edited as JSON: parse it, check it on the server, and find the components it would use. */
+export async function applyManualConfig(client, text) {
+  let config;
+  try {
+    config = JSON.parse(text);
+  } catch (e) {
+    return { ok: false, errors: ["This is not valid JSON: " + e.message] };
+  }
+  if (!config || typeof config !== "object" || Array.isArray(config)) return { ok: false, errors: ["The config must be a JSON object."] };
+  const checked = await client.check(config);
+  if (!checked.ok) return { ok: false, errors: checked.errors };
+  const composed = await client.compose({ websiteType: config.websiteType, styleLevel: config.styleLevel, enabledOptional: config.rooms?.enabled || [], industry: config.industry });
+  return { ok: true, config, composition: composed.composition, lock: composed.lock };
 }

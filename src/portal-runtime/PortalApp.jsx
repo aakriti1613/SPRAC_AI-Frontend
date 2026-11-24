@@ -162,7 +162,7 @@ export default function PortalApp() {
             to="/"
             className="mt-5 inline-flex rounded-lg bg-white px-4 py-2 text-sm font-semibold text-slate-950"
           >
-            Back to gallery
+            Back to home
           </Link>
         </section>
       </main>

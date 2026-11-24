@@ -16,18 +16,18 @@ import { useAuth } from "./AuthContext";
 const highlights = [
   {
     icon: LayoutTemplate,
-    title: "Pick a template",
-    text: "Landing pages and admin portals, pre-styled and ready to customise.",
+    title: "Pick a kind of website",
+    text: "Admin portal, portfolio, landing page, online store or booking site.",
   },
   {
     icon: Database,
-    title: "Configure the data",
-    text: "Describe modules and fields once. Tables, forms, and auth are generated.",
+    title: "Template or SPARC AI",
+    text: "Start from a ready template, or describe it and let SPARC AI assemble it from tested parts.",
   },
   {
     icon: Rocket,
-    title: "Deploy in minutes",
-    text: "Get a live URL, a GitHub repo, and a Supabase project in one click.",
+    title: "Review and go live",
+    text: "Check the plan, then publish to GitHub and get a live link.",
   },
 ];
 
@@ -90,20 +90,20 @@ export default function LoginPage() {
                   <Blocks className="h-5 w-5 text-white" strokeWidth={2} />
                 </div>
                 <span className="text-base font-semibold tracking-tight text-white">
-                  Scaffolding
+                  SPARC AI
                 </span>
               </div>
 
               <h2 className="mt-12 text-balance text-3xl font-bold leading-[1.1] tracking-[-0.02em] text-white xl:text-4xl">
-                Build apps from{" "}
+                Build websites from{" "}
                 <span className="bg-gradient-to-r from-sky-300 via-indigo-300 to-sky-300 bg-clip-text text-transparent">
-                  configuration
+                  reusable parts
                 </span>
-                , not boilerplate.
+                , not new code.
               </h2>
               <p className="mt-4 max-w-md text-sm leading-relaxed text-slate-400">
-                Generate landing pages and data-backed admin portals from reusable
-                building blocks, then ship them with a live database.
+                Portals, portfolios, landing pages, online stores and booking sites,
+                assembled from tested building blocks and ready to publish.
               </p>
 
               <ul className="mt-10 space-y-5">
@@ -136,7 +136,7 @@ export default function LoginPage() {
                 <Blocks className="h-5 w-5 text-white" strokeWidth={2} />
               </div>
               <span className="text-base font-semibold tracking-tight text-white">
-                Scaffolding
+                SPARC AI
               </span>
             </div>
 
@@ -145,7 +145,7 @@ export default function LoginPage() {
                 Welcome back
               </h1>
               <p className="mt-1.5 text-sm text-slate-400">
-                Sign in to manage templates and portals.
+                Sign in to build and manage your websites.
               </p>
             </div>
 
@@ -239,7 +239,7 @@ export default function LoginPage() {
             </form>
 
             <p className="mt-8 text-center text-xs text-slate-600">
-              Scaffolding Platform · Admin Access Only
+              SPARC AI · Admin Access Only
             </p>
           </div>
         </div>

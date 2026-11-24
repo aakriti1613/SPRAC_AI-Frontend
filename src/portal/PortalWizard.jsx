@@ -297,7 +297,7 @@ function ProgressOverlay({
                 onClick={onClose}
                 className="inline-flex items-center justify-center rounded-lg bg-sky-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-sky-400"
               >
-                Back to Gallery
+                Back to home
               </button>
             </div>
           </motion.div>
@@ -640,7 +640,7 @@ export default function PortalWizard() {
             className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 transition hover:text-white"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
-            Back to Gallery
+            Back to home
           </Link>
 
           <div className="mt-5 flex items-center gap-3">
@@ -796,7 +796,7 @@ export default function PortalWizard() {
           <div className="flex min-h-16 items-center justify-between gap-4 px-4 sm:px-6">
             <Link to="/" className="flex items-center gap-2 text-slate-400 transition hover:text-white">
               <ArrowLeft className="h-4 w-4" />
-              <span className="text-xs font-semibold">Gallery</span>
+              <span className="text-xs font-semibold">Home</span>
             </Link>
             <span className="max-w-[160px] truncate text-sm font-bold text-white">
               {config.appName}

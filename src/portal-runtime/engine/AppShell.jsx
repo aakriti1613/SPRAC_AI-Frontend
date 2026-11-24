@@ -115,7 +115,7 @@ export default function AppShell({ config, slug, children }) {
                 to="/"
                 className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-400 hover:text-white"
               >
-                Gallery
+                Home
               </Link>
             </div>
           </div>

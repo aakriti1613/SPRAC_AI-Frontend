@@ -885,7 +885,7 @@ function ReviewScreen({
         <div>
           <h3 className="text-lg font-semibold text-white">Review &amp; generate</h3>
           <p className="mt-1 text-sm text-slate-400">
-            Preview the validated portfolio content before scaffolding.
+            Preview the validated portfolio content before generating.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -959,7 +959,7 @@ function ReviewScreen({
           {scaffolding ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />
-              Scaffolding...
+              Generating...
             </>
           ) : (
             <>
