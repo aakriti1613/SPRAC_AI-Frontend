@@ -41,7 +41,7 @@ export function createBuilderClient(fetchApi) {
     compose: ({ websiteType, styleLevel, enabledOptional }) => call(fetchApi, "/api/compose", { method: "POST", body: { websiteType, styleLevel, enabledOptional } }),
 
     /** Assemble the project into the server's output folder, ready to push and deploy. */
-    build: ({ config, name }) => call(fetchApi, "/api/build", { method: "POST", body: { config, name, forDeploy: true } }),
+    build: ({ config, name, feedback }) => call(fetchApi, "/api/build", { method: "POST", body: { config, name, forDeploy: true, ...(feedback ? { feedback } : {}) } }),
 
     push: ({ projectName, description }) => call(fetchApi, "/api/push", { method: "POST", body: { projectName, description } }),
     deploy: ({ repoName, owner }) => call(fetchApi, "/api/deploy", { method: "POST", body: { repoName, owner } }),

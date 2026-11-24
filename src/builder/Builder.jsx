@@ -66,11 +66,11 @@ export default function Builder() {
   const onBuild = useCallback(async () => {
     dispatch({ type: "busy", value: "building" });
     try {
-      dispatch({ type: "built", result: await client.build({ config: state.config, name: state.projectName }) });
+      dispatch({ type: "built", result: await client.build({ config: state.config, name: state.projectName, feedback: { plannedModuleIds: state.plan?.signals?.moduleIds ?? [], description: state.description } }) });
     } catch (e) {
       dispatch({ type: "error", message: e.message });
     }
-  }, [client, state.config, state.projectName]);
+  }, [client, state.config, state.projectName, state.description, state.plan]);
 
   const onPush = useCallback(async () => {
     dispatch({ type: "busy", value: "pushing" });
